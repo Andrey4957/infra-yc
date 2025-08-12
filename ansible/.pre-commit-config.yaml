@@ -1,0 +1,16 @@
+---
+repos:
+  - repo: local
+    hooks:
+      # yamllint из системы, без скачиваний
+      - id: yamllint
+        name: yamllint
+        entry: yamllint -c .yamllint
+        language: system
+        files: \.(yml|yaml)$
+      # ansible-lint из системы, с автофиксом где можно
+      - id: ansible-lint
+        name: ansible-lint
+        entry: ansible-lint -c .ansible-lint --write
+        language: system
+        pass_filenames: false

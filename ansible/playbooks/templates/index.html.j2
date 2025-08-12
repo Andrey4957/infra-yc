@@ -1,0 +1,13 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <title>YC + Terraform + Ansible</title>
+  <style>body{font-family:system-ui;margin:40px;max-width:720px}.ok{color:#10b981}</style>
+</head>
+<body>
+  <h1 class="ok">Готово! 🚀</h1>
+  <p>Хост: {{ ansible_hostname }}</p>
+  <p>Дата деплоя: {{ ansible_date_time.date }} {{ ansible_date_time.time }}</p>
+</body>
+</html>

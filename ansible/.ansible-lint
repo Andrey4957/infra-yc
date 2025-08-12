@@ -1,0 +1,7 @@
+---
+profile: production
+parseable: true
+warn_list:
+  - experimental
+skip_list: []
+# можно точечно подрубать/отрубать правила при необходимости

@@ -1,0 +1,14 @@
+---
+extends: default
+rules:
+  line-length: disable
+  truthy: disable
+  comments: disable
+  indentation:
+    indent-sequences: consistent
+  empty-lines:
+    max: 0
+    max-start: 0
+    max-end: 1
+  trailing-spaces: enable
+  document-start: enable

@@ -1,0 +1,61 @@
+---
+- name: Base web host
+  hosts: web
+  become: true
+  gather_facts: true
+
+  vars:
+    deploy_user: deployer
+
+  handlers:
+    - name: restart nginx
+      service:
+        name: nginx
+        state: restarted
+
+  tasks:
+    - name: Обновить кэш APT
+      apt:
+        update_cache: yes
+        cache_valid_time: 3600
+
+    - name: Установить nginx и ufw
+      apt:
+        name:
+          - nginx
+          - ufw
+        state: present
+
+    - name: Создать пользователя {{ deploy_user }}
+      user:
+        name: "{{ deploy_user }}"
+        groups: sudo
+        append: yes
+        shell: /bin/bash
+        create_home: yes
+
+    - name: Подложить наш SSH ключ пользователю {{ deploy_user }}
+      authorized_key:
+        user: "{{ deploy_user }}"
+        key: "{{ lookup('file', lookup('env','HOME') + '/.ssh/id_rsa.pub') }}"
+
+    - name: Дать {{ deploy_user }} sudo без пароля
+      copy:
+        dest: /etc/sudoers.d/{{ deploy_user }}
+        content: "{{ deploy_user }} ALL=(ALL) NOPASSWD:ALL\n"
+        mode: '0440'
+
+    - name: Разрешить OpenSSH в UFW
+      community.general.ufw:
+        rule: allow
+    ---
+- name: Подготовка веб-сервера
+  hosts: web
+  become: true
+  gather_facts: true
+
+  roles:
+    - { role: common,   tags: ['common'] }
+    - { role: firewall, tags: ['firewall'] }
+    - { role: nginx,    tags: ['nginx'] }
+
