@@ -49,7 +49,3 @@ resource "yandex_compute_instance" "vm" {
     ssh-keys = "ваш_пользователь_на_вм:ssh-rsa AAAA..." # не забудь заменить
   }
 }
-
-output "public_ip" {
-  value = yandex_compute_instance.vm.network_interface.0.nat_ip_address
-}
