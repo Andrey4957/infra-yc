@@ -1,6 +1,6 @@
-cat > ~/infra-yc/terraform/main.tf <<'EOF'
 terraform {
   required_version = ">= 1.5.0"
+
   required_providers {
     yandex = {
       source  = "yandex-cloud/yandex"
@@ -12,13 +12,9 @@ terraform {
 provider "yandex" {
   cloud_id  = var.cloud_id
   folder_id = var.folder_id
-
-  # В Actions будем использовать ключ сервисного аккаунта (YC_SA_KEY_JSON),
-  # здесь путь к нему придёт как переменная.
   service_account_key_file = var.service_account_key_file
 }
 
-# Сеть и подсеть
 resource "yandex_vpc_network" "net" {
   name = "net-auto"
 }
@@ -30,12 +26,10 @@ resource "yandex_vpc_subnet" "subnet" {
   v4_cidr_blocks = ["10.10.0.0/24"]
 }
 
-# Образ Ubuntu
 data "yandex_compute_image" "ubuntu" {
   family = "ubuntu-2004-lts"
 }
 
-# Виртуальная машина
 resource "yandex_compute_instance" "vm" {
   name        = "tf-vm-a"
   platform_id = "standard-v1"
@@ -55,12 +49,10 @@ resource "yandex_compute_instance" "vm" {
 
   network_interface {
     subnet_id = yandex_vpc_subnet.subnet.id
-    nat       = true               # даём публичный IP
+    nat       = true
   }
 
   metadata = {
-    # Передаём публичный ключ: "пользователь:ключ"
-    "ssh-keys" = "${var.ssh_user}:${var.ssh_public_key}"
+    ssh-keys = "${var.ssh_user}:${var.ssh_public_key}"
   }
 }
-EOF
