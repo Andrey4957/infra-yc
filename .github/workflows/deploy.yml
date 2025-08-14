@@ -12,7 +12,6 @@ jobs:
       TF_IN_AUTOMATION: "true"
       TF_VAR_cloud_id:       ${{ secrets.YC_CLOUD_ID }}
       TF_VAR_folder_id:      ${{ secrets.YC_FOLDER_ID }}
-      TF_VAR_service_account_key_file: "key.json"
       TF_VAR_ssh_user:       ${{ secrets.SSH_USER }}
       TF_VAR_ssh_public_key: ${{ secrets.SSH_PUBLIC_KEY }}
 
@@ -20,13 +19,14 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v4
 
+      # ---------- Terraform ----------
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
 
       - name: Write SA key (for provider)
         working-directory: terraform
         run: |
-          echo "${{ secrets.YC_SA_KEY_JSON }}" > key.json
+          echo "${{ secrets.YC_SA_KEY_JSON }}" | base64 -d > key.json
 
       - name: Terraform Init
         working-directory: terraform
@@ -44,6 +44,7 @@ jobs:
           echo "PUBLIC_IP=$ip" >> $GITHUB_ENV
           echo "Public IP: $ip"
 
+      # ---------- Ansible ----------
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
