@@ -1,20 +1,21 @@
 # terraform/main.tf
 
-# Используем существующую сеть "default"
+# Сеть "default"
 data "yandex_vpc_network" "default" {
   name = "default"
 }
 
+# Новая подсеть с НЕпересекающимся CIDR
 resource "yandex_vpc_subnet" "subnet" {
-  name           = "subnet-auto"
+  name           = "subnet-auto-02"              # новое имя
   zone           = var.zone
   network_id     = data.yandex_vpc_network.default.id
-  v4_cidr_blocks = ["10.10.0.0/24"]
+  v4_cidr_blocks = ["10.20.0.0/24"]              # новый CIDR (не 10.10.0.0/24)
 }
 
-# Security Group: разрешим SSH и HTTP
+# Security Group с новым именем
 resource "yandex_vpc_security_group" "web_sg" {
-  name       = "web-sg"
+  name       = "web-sg-02"                       # новое имя
   network_id = data.yandex_vpc_network.default.id
 
   ingress {
@@ -39,14 +40,14 @@ resource "yandex_vpc_security_group" "web_sg" {
   }
 }
 
-# Образ Ubuntu LTS
+# Образ Ubuntu
 data "yandex_compute_image" "ubuntu" {
   family = "ubuntu-2004-lts"
 }
 
-# ВМ (переименовали, чтобы не конфликтовало)
+# ВМ с новым именем
 resource "yandex_compute_instance" "vm" {
-  name        = "tf-vm-a-02"   # <-- новое уникальное имя
+  name        = "tf-vm-a-02"                     # новое имя
   platform_id = "standard-v1"
   zone        = var.zone
 
