@@ -1,5 +1,10 @@
 name: Deploy (Terraform -> Ansible)
 
+# Требуются secrets:
+# YC_SA_KEY_JSON (base64 JSON ключа SA), YC_CLOUD_ID, YC_FOLDER_ID,
+# SSH_USER, SSH_PUBLIC_KEY, SSH_PRIVATE_KEY,
+# YC_TFSTATE_BUCKET, YC_OBS_ACCESS_KEY_ID, YC_OBS_SECRET_ACCESS_KEY
+
 on:
   workflow_dispatch: {}
   push:
@@ -36,14 +41,25 @@ jobs:
           python3 - <<'PY'
           import os, base64, json
           data = base64.b64decode(os.environ['KEY_B64'])
-          json.loads(data.decode('utf-8'))   # валидация что это JSON
+          json.loads(data.decode('utf-8'))   # validate JSON
           open('key.json','wb').write(data)
           PY
           chmod 600 key.json
 
-      - name: Terraform Init
+      - name: Terraform Init (remote state in YC Object Storage)
         working-directory: terraform
-        run: terraform init -input=false
+        env:
+          AWS_ACCESS_KEY_ID:     ${{ secrets.YC_OBS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.YC_OBS_SECRET_ACCESS_KEY }}
+        run: |
+          terraform init -input=false \
+            -backend-config="endpoint=storage.yandexcloud.net" \
+            -backend-config="bucket=${{ secrets.YC_TFSTATE_BUCKET }}" \
+            -backend-config="key=infra/terraform.tfstate" \
+            -backend-config="region=ru-central1" \
+            -backend-config="skip_region_validation=true" \
+            -backend-config="skip_credentials_validation=true" \
+            -backend-config="force_path_style=true"
 
       - name: Terraform Apply
         working-directory: terraform
@@ -69,8 +85,9 @@ jobs:
 
       - name: Install Ansible
         run: |
-          python3 -m pip install --upgrade pip
-          pip install --disable-pip-version-check ansible==9.6.0
+          python3 -m pip install --upgrade pip wheel
+          pip install "ansible-core==2.16.8"
+          ansible --version
 
       - name: Prepare SSH key
         run: |
