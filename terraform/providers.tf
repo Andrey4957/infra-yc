@@ -1,4 +1,3 @@
-cat > terraform/providers.tf <<'HCL'
 terraform {
   required_providers {
     yandex = {
@@ -14,4 +13,3 @@ provider "yandex" {
   folder_id = var.folder_id
   zone      = var.zone
 }
-HCL
