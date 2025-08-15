@@ -12,7 +12,7 @@ resource "yandex_vpc_subnet" "subnet" {
   v4_cidr_blocks = ["10.10.0.0/24"]
 }
 
-# Security Group (многострочные блоки, без one-liner!)
+# Security Group: разрешим SSH и HTTP
 resource "yandex_vpc_security_group" "web_sg" {
   name       = "web-sg"
   network_id = data.yandex_vpc_network.default.id
@@ -44,9 +44,9 @@ data "yandex_compute_image" "ubuntu" {
   family = "ubuntu-2004-lts"
 }
 
-# ВМ
+# ВМ (переименовали, чтобы не конфликтовало)
 resource "yandex_compute_instance" "vm" {
-  name        = "tf-vm-a"
+  name        = "tf-vm-a-02"   # <-- новое уникальное имя
   platform_id = "standard-v1"
   zone        = var.zone
 
