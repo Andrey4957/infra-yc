@@ -1,3 +1,5 @@
+# terraform/main.tf
+
 # Используем существующую сеть "default"
 data "yandex_vpc_network" "default" {
   name = "default"
@@ -10,14 +12,31 @@ resource "yandex_vpc_subnet" "subnet" {
   v4_cidr_blocks = ["10.10.0.0/24"]
 }
 
-# Разрешим SSH и HTTP (чтобы Ansible и nginx не упирались в фаервол)
+# Security Group (многострочные блоки, без one-liner!)
 resource "yandex_vpc_security_group" "web_sg" {
   name       = "web-sg"
   network_id = data.yandex_vpc_network.default.id
 
-  ingress { protocol = "TCP" port = 22 v4_cidr_blocks = ["0.0.0.0/0"] }
-  ingress { protocol = "TCP" port = 80 v4_cidr_blocks = ["0.0.0.0/0"] }
-  egress  { protocol = "ANY" from_port = 0 to_port = 65535 v4_cidr_blocks = ["0.0.0.0/0"] }
+  ingress {
+    protocol       = "TCP"
+    from_port      = 22
+    to_port        = 22
+    v4_cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  ingress {
+    protocol       = "TCP"
+    from_port      = 80
+    to_port        = 80
+    v4_cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  egress {
+    protocol       = "ANY"
+    from_port      = 0
+    to_port        = 65535
+    v4_cidr_blocks = ["0.0.0.0/0"]
+  }
 }
 
 # Образ Ubuntu LTS
@@ -25,6 +44,7 @@ data "yandex_compute_image" "ubuntu" {
   family = "ubuntu-2004-lts"
 }
 
+# ВМ
 resource "yandex_compute_instance" "vm" {
   name        = "tf-vm-a"
   platform_id = "standard-v1"
