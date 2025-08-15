@@ -1,10 +1,10 @@
-cat > .github/workflows/deploy.yml <<'YML'
-name: Deploy (Terraform → Ansible)
+name: Deploy (Terraform -> Ansible)
 
 on:
-  workflow_dispatch:
+  workflow_dispatch: {}
   push:
-    branches: [ master ]
+    branches:
+      - master
     paths:
       - 'terraform/**'
       - 'ansible/**'
@@ -24,18 +24,19 @@ jobs:
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
         with:
-          terraform_version: 1.6.6
+          terraform_version: '1.6.6'
 
       - name: Write SA key (from base64 secret)
         working-directory: terraform
         env:
           KEY_B64: ${{ secrets.YC_SA_KEY_JSON }}
+        shell: bash
         run: |
           set -euo pipefail
           python3 - <<'PY'
           import os, base64, json
           data = base64.b64decode(os.environ['KEY_B64'])
-          json.loads(data.decode('utf-8'))
+          json.loads(data.decode('utf-8'))   # валидация что это JSON
           open('key.json','wb').write(data)
           PY
           chmod 600 key.json
@@ -58,7 +59,7 @@ jobs:
       - name: Grab public IP
         id: tfout
         working-directory: terraform
-        run: echo "PUBLIC_IP=$(terraform output -raw public_ip)" >> $GITHUB_OUTPUT
+        run: echo "PUBLIC_IP=$(terraform output -raw public_ip)" >> "$GITHUB_OUTPUT"
 
       # ---------- Ansible ----------
       - name: Setup Python
@@ -67,7 +68,9 @@ jobs:
           python-version: '3.11'
 
       - name: Install Ansible
-        run: python3 -m pip install --upgrade pip && pip install --disable-pip-version-check ansible==9.6.0
+        run: |
+          python3 -m pip install --upgrade pip
+          pip install --disable-pip-version-check ansible==9.6.0
 
       - name: Prepare SSH key
         run: |
@@ -81,10 +84,9 @@ jobs:
         env:
           ANSIBLE_HOST_KEY_CHECKING: "False"
         run: |
-          cat > inventory.ini <<EOF
+          cat > inventory.ini <<'EOF'
           [web]
           ${{ steps.tfout.outputs.PUBLIC_IP }} ansible_user=${{ secrets.SSH_USER }} ansible_ssh_private_key_file=~/.ssh/id_rsa
           EOF
           ansible -i inventory.ini web -m ping
           ansible-playbook -i inventory.ini playbooks/site.yml
-YML
