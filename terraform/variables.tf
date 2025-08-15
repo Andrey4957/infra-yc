@@ -1,4 +1,3 @@
-cat > terraform/variables.tf <<'HCL'
 variable "cloud_id"  { type = string }
 variable "folder_id" { type = string }
 
@@ -20,4 +19,4 @@ variable "ssh_user" {
 variable "ssh_public_key" {
   type = string
 }
-HCL
+
