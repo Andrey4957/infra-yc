@@ -1,15 +1,31 @@
+cat > ansible/playbooks/site.yml <<'YML'
 ---
-- name: Prepare web server
+- name: Configure web host
   hosts: web
   become: true
-  gather_facts: true
-  roles:
-    - role: common
-      tags:
-        - common
-    - role: firewall
-      tags:
-        - firewall
-    - role: nginx
-      tags:
-        - nginx
+
+  tasks:
+    - name: Update apt cache
+      apt:
+        update_cache: yes
+        cache_valid_time: 3600
+
+    - name: Install nginx
+      apt:
+        name: nginx
+        state: present
+
+    - name: Deploy index.html
+      template:
+        src: ../templates/index.html.j2
+        dest: /var/www/html/index.html
+        owner: www-data
+        group: www-data
+        mode: "0644"
+
+    - name: Ensure nginx is running
+      service:
+        name: nginx
+        state: started
+        enabled: true
+YML

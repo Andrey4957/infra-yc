@@ -1,17 +1,11 @@
-provider "yandex" {
-  cloud_id  = var.cloud_id
-  folder_id = var.folder_id
-  zone      = "ru-central1-a"
-}
-
-# Используем существующую сеть
+cat > terraform/main.tf <<'HCL'
 data "yandex_vpc_network" "default" {
-  name = "default" # или поменяй на имя своей сети
+  name = "default"
 }
 
 resource "yandex_vpc_subnet" "subnet" {
   name           = "subnet-auto"
-  zone           = "ru-central1-a"
+  zone           = var.zone
   network_id     = data.yandex_vpc_network.default.id
   v4_cidr_blocks = ["10.10.0.0/24"]
 }
@@ -23,7 +17,7 @@ data "yandex_compute_image" "ubuntu" {
 resource "yandex_compute_instance" "vm" {
   name        = "tf-vm-a"
   platform_id = "standard-v1"
-  zone        = "ru-central1-a"
+  zone        = var.zone
 
   resources {
     cores         = 2
@@ -46,6 +40,7 @@ resource "yandex_compute_instance" "vm" {
   }
 
   metadata = {
-    ssh-keys = "ваш_пользователь_на_вм:ssh-rsa AAAA..." # не забудь заменить
+    "ssh-keys" = "${var.ssh_user}:${var.ssh_public_key}"
   }
 }
+HCL

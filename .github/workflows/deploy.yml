@@ -1,19 +1,20 @@
+cat > .github/workflows/deploy.yml <<'YML'
 name: Deploy (Terraform → Ansible)
 
 on:
-  push:
-    branches: [ master, main ]
   workflow_dispatch:
+  push:
+    branches: [ master ]
+    paths:
+      - 'terraform/**'
+      - 'ansible/**'
+      - '.github/workflows/deploy.yml'
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
     env:
       TF_IN_AUTOMATION: "true"
-      TF_VAR_cloud_id:       ${{ secrets.YC_CLOUD_ID }}
-      TF_VAR_folder_id:      ${{ secrets.YC_FOLDER_ID }}
-      TF_VAR_ssh_user:       ${{ secrets.SSH_USER }}
-      TF_VAR_ssh_public_key: ${{ secrets.SSH_PUBLIC_KEY }}
 
     steps:
       - name: Checkout repo
@@ -22,11 +23,22 @@ jobs:
       # ---------- Terraform ----------
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.6.6
 
-      - name: Write SA key (for provider)
+      - name: Write SA key (from base64 secret)
         working-directory: terraform
+        env:
+          KEY_B64: ${{ secrets.YC_SA_KEY_JSON }}
         run: |
-          echo "${{ secrets.YC_SA_KEY_JSON }}" | base64 -d > key.json
+          set -euo pipefail
+          python3 - <<'PY'
+          import os, base64, json
+          data = base64.b64decode(os.environ['KEY_B64'])
+          json.loads(data.decode('utf-8'))
+          open('key.json','wb').write(data)
+          PY
+          chmod 600 key.json
 
       - name: Terraform Init
         working-directory: terraform
@@ -34,15 +46,19 @@ jobs:
 
       - name: Terraform Apply
         working-directory: terraform
+        env:
+          TF_VAR_cloud_id:       ${{ secrets.YC_CLOUD_ID }}
+          TF_VAR_folder_id:      ${{ secrets.YC_FOLDER_ID }}
+          TF_VAR_zone:           ru-central1-a
+          TF_VAR_service_account_key_file: key.json
+          TF_VAR_ssh_user:       ${{ secrets.SSH_USER }}
+          TF_VAR_ssh_public_key: ${{ secrets.SSH_PUBLIC_KEY }}
         run: terraform apply -auto-approve -input=false
 
       - name: Grab public IP
-        id: tf-output
+        id: tfout
         working-directory: terraform
-        run: |
-          ip=$(terraform output -raw public_ip)
-          echo "PUBLIC_IP=$ip" >> $GITHUB_ENV
-          echo "Public IP: $ip"
+        run: echo "PUBLIC_IP=$(terraform output -raw public_ip)" >> $GITHUB_OUTPUT
 
       # ---------- Ansible ----------
       - name: Setup Python
@@ -51,14 +67,14 @@ jobs:
           python-version: '3.11'
 
       - name: Install Ansible
-        run: pip install --disable-pip-version-check ansible==9.6.0
+        run: python3 -m pip install --upgrade pip && pip install --disable-pip-version-check ansible==9.6.0
 
       - name: Prepare SSH key
         run: |
           mkdir -p ~/.ssh
           echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
-          ssh-keyscan -H "$PUBLIC_IP" >> ~/.ssh/known_hosts
+          ssh-keyscan -H "${{ steps.tfout.outputs.PUBLIC_IP }}" >> ~/.ssh/known_hosts
 
       - name: Run Ansible playbook
         working-directory: ansible
@@ -67,7 +83,8 @@ jobs:
         run: |
           cat > inventory.ini <<EOF
           [web]
-          ${PUBLIC_IP} ansible_user=${{ secrets.SSH_USER }} ansible_ssh_private_key_file=~/.ssh/id_rsa
+          ${{ steps.tfout.outputs.PUBLIC_IP }} ansible_user=${{ secrets.SSH_USER }} ansible_ssh_private_key_file=~/.ssh/id_rsa
           EOF
           ansible -i inventory.ini web -m ping
           ansible-playbook -i inventory.ini playbooks/site.yml
+YML

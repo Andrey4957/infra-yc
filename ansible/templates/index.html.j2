@@ -1,0 +1,18 @@
+cat > ansible/templates/index.html.j2 <<'HTML'
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>YC Demo</title>
+    <style>
+      body{font-family:system-ui,Arial,sans-serif;margin:40px}
+      .pill{display:inline-block;padding:4px 10px;border-radius:999px;background:#eef}
+    </style>
+  </head>
+  <body>
+    <h1>✅ Урок 21: CI/CD → Terraform → Ansible</h1>
+    <p>Хост развернут и сконфигурирован автоматически.</p>
+    <p class="pill">IP: {{ ansible_host }}</p>
+  </body>
+</html>
+HTML
