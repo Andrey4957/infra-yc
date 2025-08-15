@@ -47,7 +47,7 @@ data "yandex_compute_image" "ubuntu" {
 
 # ВМ с новым именем
 resource "yandex_compute_instance" "vm" {
-  name        = "tf-vm-a-03"                     # новое имя
+  name        = "tf-vm-a-04"                     # новое имя
   platform_id = "standard-v1"
   zone        = var.zone
 
